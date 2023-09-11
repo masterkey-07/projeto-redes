@@ -3,7 +3,6 @@ import java.net.*;
 import java.util.*;
 
 public class Server {
-    private static Set<PrintWriter> clientWriters = new HashSet<>();
 
     public static void main(String[] args) {
         final int port = 5000;
@@ -11,10 +10,16 @@ public class Server {
         try {
             ServerSocket server = new ServerSocket(port);
 
+            Set<PrintWriter> clients = new HashSet<>();
+
             System.out.println("Server is running on port " + port);
 
             while (true) {
-                new ClientHandler(server.accept()).start();
+                Socket socket = server.accept();
+
+                ClientHandler handler = new ClientHandler(socket, clients);
+
+                handler.start();
             }
 
         } catch (IOException e) {
@@ -25,9 +30,11 @@ public class Server {
     private static class ClientHandler extends Thread {
         private Socket socket;
         private PrintWriter myWriter;
+        private Set<PrintWriter> clients;
 
-        public ClientHandler(Socket socket) {
+        public ClientHandler(Socket socket, Set<PrintWriter> clients) {
             this.socket = socket;
+            this.clients = clients;
         }
 
         @Override
@@ -36,8 +43,8 @@ public class Server {
                 myWriter = new PrintWriter(socket.getOutputStream(), true);
 
                 // it runs in a thread safe way
-                synchronized (clientWriters) {
-                    clientWriters.add(myWriter);
+                synchronized (this.clients) {
+                    this.clients.add(myWriter);
                 }
 
                 InputStream inputSream = socket.getInputStream();
@@ -49,8 +56,9 @@ public class Server {
                 String message;
 
                 while ((message = bufferedReader.readLine()) != null) {
-                    synchronized (clientWriters) {
-                        for (PrintWriter writer : clientWriters) {
+                    // it runs in a thread safe way
+                    synchronized (this.clients) {
+                        for (PrintWriter writer : this.clients) {
 
                             if (myWriter != writer)
                                 writer.println(message);
@@ -61,9 +69,11 @@ public class Server {
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
+                // it runs here when the client disconnects
+
                 // it runs in a thread safe way
-                synchronized (clientWriters) {
-                    clientWriters.remove(myWriter);
+                synchronized (this.clients) {
+                    this.clients.remove(myWriter);
                 }
 
                 try {
