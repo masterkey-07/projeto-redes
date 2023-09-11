@@ -28,8 +28,11 @@ readlinePrompt.question("Coloca o nome do seu usuário: ", (answer) => {
   });
 
   readlinePrompt.on("line", (input) => {
-    if (input.includes("quit") && input.length === "quit".length)
+    if (input.includes("quit") && input.length === "quit".length) {
+      sockets.write(`O usuário \"${username}\" saiu do chat\n`);
+
       return sockets.destroy();
+    }
 
     sockets.write(`(${username}) ${input}\n`);
 
@@ -37,10 +40,7 @@ readlinePrompt.question("Coloca o nome do seu usuário: ", (answer) => {
   });
 
   sockets.on("close", () => {
-    sockets.write(`O usuário \"${username}\" saiu do chat\n`);
-
     readlinePrompt.close();
-
     console.log("desconectado do chat");
   });
 
