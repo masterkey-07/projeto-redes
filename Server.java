@@ -40,7 +40,9 @@ public class Server {
         @Override
         public void run() {
             try {
-                myWriter = new PrintWriter(socket.getOutputStream(), true);
+                OutputStream outputStream = socket.getOutputStream();
+
+                myWriter = new PrintWriter(outputStream, true);
 
                 // it runs in a thread safe way
                 synchronized (this.clients) {
